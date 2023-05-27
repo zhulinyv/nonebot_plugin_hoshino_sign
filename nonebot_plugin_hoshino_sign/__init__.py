@@ -77,9 +77,13 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get("https://api.vvhan.com/api/ian")
-            response_text = response.text
+            status_code = response.status_code
+            if status_code == 200:
+                response_text = response.text
+            else:
+                response_text = f"今日一言: 请求错误: {status_code}"
     except Exception as error:
-        response_text = error
+        logger.warning(error)
 
     # 读写数据
     with open(GOODWILL_PATH + "goodwill.json", "r", encoding="utf-8") as f:
@@ -151,7 +155,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     if isinstance(event, GroupMessageEvent):
         lucky_user_card = await get_user_card(bot, gid, uid)
         try:
-            await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}', at_sender=True)
+            await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}')
         except ActionFailed:
             logger.warning("直接发送失败, 尝试以转发形式发送!")
             msgs = []
