@@ -25,6 +25,8 @@ _✨ NoneBot 签到 ✨_
 
 一个从 hoshino **~~抄~~借鉴**的 nonebot2 签到插件
 
+原项目地址: [签到奖励魔改版](https://github.com/SonderXiaoming/login_bonus)
+
 ## 💿 安装
 
 <details>
@@ -83,11 +85,11 @@ _✨ NoneBot 签到 ✨_
 
 ### 效果图
 
+[![p9cSLCR.png](https://s1.ax1x.com/2023/05/13/p9cSLCR.png)](https://imgse.com/i/p9cSLCR)
+
 **(来自原作者的话) ↓↓↓**
 
 ![收集册](https://user-images.githubusercontent.com/98363578/185780489-d60b1484-c4af-4834-b1f4-6db569a91048.PNG)
-
-[![p9cSLCR.png](https://s1.ax1x.com/2023/05/13/p9cSLCR.png)](https://imgse.com/i/p9cSLCR)
 
 红的是已经收集到的，灰的是没收集的
 
@@ -96,3 +98,7 @@ _✨ NoneBot 签到 ✨_
 #### 素材来源：
 
 https://tieba.baidu.com/p/6769790810
+
+## 联系我吖
+
+⚠️ 如果遇到任何部署、使用或二次开发上的问题或建议, 可以在 QQ频道: [我的中心花园-开发交流](https://pd.qq.com/s/8bkfowg3c) 找到我。
