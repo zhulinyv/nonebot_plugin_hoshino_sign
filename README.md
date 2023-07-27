@@ -102,3 +102,7 @@ https://tieba.baidu.com/p/6769790810
 ## 联系我吖
 
 ⚠️ 如果遇到任何部署、使用或二次开发上的问题或建议, 可以在 QQ频道: [我的中心花园-开发交流](https://pd.qq.com/s/8bkfowg3c) 找到我。
+
+
+<hr>
+<img width="300px" src="https://count.getloli.com/get/@zhulinyv?theme=rule34"></img>
