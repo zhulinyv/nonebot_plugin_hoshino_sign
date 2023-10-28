@@ -7,8 +7,10 @@ import nonebot
 from io import BytesIO
 from typing import Union
 from nonebot import require
+require("nonebot_plugin_imageutils")
 require("nonebot_plugin_guild_patch")
 from nonebot.plugin import PluginMetadata
+from nonebot_plugin_imageutils import Text2Image
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.adapters.onebot.v11.exception import ActionFailed
 
@@ -47,8 +49,9 @@ __plugin_meta__ = PluginMetadata(
     ),
     extra={
         "author": "zhulinyv <zhulinyv2005@outlook.com>",
-        "version": "2.0.9",
+        "version": "2.1.10",
     },
+    config=Config
 )
 
 
@@ -91,12 +94,12 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
     # 一言
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get("https://api.vvhan.com/api/ian")
+            response = await client.get("https://tenapi.cn/v2/yiyan")
             status_code = response.status_code
             if status_code == 200:
                 response_text = response.text
             else:
-                response_text = f"今日一言: 请求错误: {status_code}"
+                response_text = f"请求错误: {status_code}"
     except Exception as error:
         logger.warning(error)
 
@@ -118,7 +121,7 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
 
 
 
-storage = on_command('收集册', priority=30, block=True)
+storage = on_command('收集册', aliases={"排行榜"}, priority=30, block=True)
 @storage.handle()
 async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEvent], msg: Message = CommandArg()):
     # 获取 QQ 号
@@ -166,16 +169,33 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     base64_str = f'base64://{base64.b64encode(buf.getvalue()).decode()}'
     img = MessageSegment.image(base64_str)
 
+    with open(GOODWILL_PATH + "goodwill.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    data = data[f"{gid}"]
+    new_dictionary = {}
+    rank_text = ""
+    rank_num = 1
+    for user_data in data:
+        new_dictionary[f"{user_data}"] = int(f"{data[f'{user_data}'][0]}")
+    for i in sorted(new_dictionary) :
+        rank_user = await get_user_card(bot, gid, str(i))
+        rank_text += f"{rank_num}. {rank_user} 好感:{new_dictionary[i]}\n"
+        rank_num += 1
+    rank_text = f"好感排行: \n\n{rank_text}"
+    rank_img = Text2Image.from_text(rank_text, 15, fill="white").to_image()
+    output = BytesIO()
+    rank_img.save(output, format="png")
+
     # 整合信息并发送
     if isinstance(event, GroupMessageEvent):
         lucky_user_card = await get_user_card(bot, gid, uid)
         try:
-            await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}')
+            await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
         except ActionFailed:
             logger.warning("直接发送失败, 尝试以转发形式发送!")
             msgs = []
             message_list = []
-            message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}')
+            message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output))
             for msg in message_list:
                 msgs.append({
                     'type': 'node',
@@ -188,8 +208,8 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
             await bot.call_api('send_group_forward_msg', group_id=gid, messages=msgs)
             logger.success("发送成功!")
     elif isinstance(event, GuildMessageEvent):
-        await storage.finish(f'的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}', at_sender=True)
+        await storage.finish(f'的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), at_sender=True)
     elif isinstance(event, PrivateMessageEvent):
-        await storage.finish(f'你的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}')
+        await storage.finish(f'你的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
     else:
         await storage.finish()

@@ -3,6 +3,8 @@ from pathlib import Path
 from PIL import Image, ImageFont
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
 
+from .config import Config, sign_config
+
 try:
     import ujson as json
 except:
@@ -14,7 +16,7 @@ __BASE = os.path.split(os.path.realpath(__file__))
 
 FRAME_DIR_PATH = os.path.join(__BASE[0], 'image')
 GOODWILL_PATH = "./data/nonebot_plugin_hoshino_sign/json/"
-STAMP_PATH = Path(os.path.join(os.path.dirname(__file__), "stamp"))
+STAMP_PATH = Path(sign_config.stamp_path)
 
 font = ImageFont.truetype(os.path.join(os.path.dirname(__file__), 'arial.ttf'), 16)
 card_file_names_all = []
