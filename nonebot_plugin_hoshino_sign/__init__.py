@@ -169,6 +169,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     base64_str = f'base64://{base64.b64encode(buf.getvalue()).decode()}'
     img = MessageSegment.image(base64_str)
 
+    '''
     with open(GOODWILL_PATH + "goodwill.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     data = data[f"{gid}"]
@@ -185,17 +186,20 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     rank_img = Text2Image.from_text(rank_text, 15, fill="white").to_image()
     output = BytesIO()
     rank_img.save(output, format="png")
+    '''
 
     # 整合信息并发送
     if isinstance(event, GroupMessageEvent):
         lucky_user_card = await get_user_card(bot, gid, uid)
         try:
-            await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
+            # await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
+            await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}', reply_message=True)
         except ActionFailed:
             logger.warning("直接发送失败, 尝试以转发形式发送!")
             msgs = []
             message_list = []
-            message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output))
+            # message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output))
+            message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}')
             for msg in message_list:
                 msgs.append({
                     'type': 'node',
@@ -208,8 +212,10 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
             await bot.call_api('send_group_forward_msg', group_id=gid, messages=msgs)
             logger.success("发送成功!")
     elif isinstance(event, GuildMessageEvent):
-        await storage.finish(f'的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), at_sender=True)
+        # await storage.finish(f'的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), at_sender=True)
+        await storage.finish(f'的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}', at_sender=True)
     elif isinstance(event, PrivateMessageEvent):
-        await storage.finish(f'你的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
+        # await storage.finish(f'你的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
+        await storage.finish(f'你的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}', reply_message=True)
     else:
         await storage.finish()
