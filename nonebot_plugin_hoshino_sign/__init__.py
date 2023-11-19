@@ -51,7 +51,7 @@ __plugin_meta__ = PluginMetadata(
 
 give_okodokai = on_command("盖章", aliases={"签到", "妈!"}, priority=30, block=True)
 @give_okodokai.handle()
-async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEvent]):
+async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEvent], bot: Bot):
     # 获取 QQ 号和群号
     uid = event.user_id
     if isinstance(event, GroupMessageEvent):
@@ -125,24 +125,43 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
             data[str(gid)] = {str(uid): [user_goodwill + goodwill, last_time]}
         json.dump(data, f, indent=4, ensure_ascii=False)
 
+    data = data[f"{gid}"]
+    new_dictionary = {}
+    rank_num = 1
+    for user_data in data:
+        new_dictionary[f"{user_data}"] = int(f"{data[f'{user_data}'][0]}")
+    for i in sorted(new_dictionary.items(), key=lambda x:x[1], reverse=True):
+        q, g = i
+        try:
+            if q != str(uid):
+                rank_num += 1
+            else:
+                rank_user = await get_user_card(bot, gid, q)
+                break
+        except Exception:
+            pass
+
     # 绘制文字
     with open(os.path.dirname(os.path.abspath(__file__)) + "/STHUPO.ttf", "rb") as draw_font:
         bytes_font = BytesIO(draw_font.read())
-        text_font = ImageFont.truetype(font=bytes_font, size=50)
-    draw.text(xy=(90, 600), text=f"好感 + {goodwill} !  当前好感: {data[str(gid)][str(uid)][0]}", font=text_font)
-    para = textwrap.wrap(f"主人今天要{todo}吗?", width=15)
+        text_font = ImageFont.truetype(font=bytes_font, size=45)
+    draw.text(xy=(98, 580), text=f"欢迎回来, {rank_user}~!", font=text_font)
+    draw.text(xy=(98, 633), text=f"好感 + {goodwill} !  当前好感: {g}", font=text_font)
+    draw.text(xy=(98, 686), text=f"当前群排名: 第 {rank_num} 位", fill=(200, 255, 255), font=text_font)
+    draw.text(xy=(98, 739), text=f"发送\"收集册\"查看收集进度", fill=(255, 180, 220), font=text_font)
+    para = textwrap.wrap(f"主人今天要{todo}吗?", width=16)
     for i, line in enumerate(para):
-        draw.text((90, 60 * i + 660), line, 'white', text_font)
-    para = textwrap.wrap(f"今日一言: {response_text}", width=15)
+        draw.text((98, 53 * i + 792), line, 'white', text_font)
+    para = textwrap.wrap(f"今日一言: {response_text}", width=16)
     for i, line in enumerate(para):
-        draw.text((90, 60 * i + 780), line, 'white', text_font)
+        draw.text((98, 53 * i + 898), line, 'white', text_font)
     output = BytesIO()
     sign_bg.save(output, format="png")
 
     await give_okodokai.send(MessageSegment.image(output), at_sender=True, reply_message=True)
 
 
-storage = on_command('收集册', aliases={"排行榜"}, priority=30, block=True)
+storage = on_command('收集册', aliases={"排行榜", "图鉴"}, priority=30, block=True)
 @storage.handle()
 async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEvent], msg: Message = CommandArg()):
     # 获取 QQ 号
@@ -198,11 +217,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     rank_num = 1
     for user_data in data:
         new_dictionary[f"{user_data}"] = int(f"{data[f'{user_data}'][0]}")
-    logger.debug(f""">>>>>
-{new_dictionary}
-<<<<<""")
     for i in sorted(new_dictionary.items(), key=lambda x:x[1], reverse=True):
-        logger.debug(f">>>>>{i}")
         q, g = i
         try:
             rank_user = await get_user_card(bot, gid, q)
