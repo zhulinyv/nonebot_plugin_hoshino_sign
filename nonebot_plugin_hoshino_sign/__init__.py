@@ -8,7 +8,7 @@ import ujson as json
 
 from io import BytesIO
 from typing import Union
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw, ImageFilter
 
 from nonebot import require
 require("nonebot_plugin_imageutils")
@@ -42,7 +42,7 @@ __plugin_meta__ = PluginMetadata(
     ),
     extra={
         "author": "zhulinyv <zhulinyv2005@outlook.com>",
-        "version": "2.2.3",
+        "version": "2.3.0",
     },
     config=Config
 )
@@ -79,20 +79,46 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
     # 发癫待办
     todo = random.choice(todo_list)
     # 增加好感
-    goodwill = random.randint(1,10)
+    goodwill = random.randint(1, 10)
     # 随机图案
     stamp = random.choice(card_file_names_all)
     path = STAMP_PATH / stamp
-    # 签到背景
-    sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/image/sign_bg.png")
+    # 下载背景
+    res = httpx.get(url='https://dev.iw233.cn/api.php?sort=mp&type=json', headers={'Referer':'http://www.weibo.com/'})
+    res = res.text
+    pic_url = json.loads(res)["pic"][0]
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{pic_url}", headers={'Referer':'http://www.weibo.com/',}, timeout=10)
+        with open(os.path.dirname(os.path.abspath(__file__)) + "/sign_bg.png", 'wb') as f:
+            f.write(response.content)
+    # 调整大小
+    sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/sign_bg.png").convert("RGBA")
+    weight, height = sign_bg.size
+    if (weight / height) >= (928 / 1133):
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        sign_bg = sign_bg.resize((int(weight * (1133 / height)), 1133))
+        print(sign_bg.size)
+        print((int((int(weight * (1133 / height)) - 928) / 2), 0, int((int(weight * (1133 / height)) - 928) / 2 + 928), 1133))
+        sign_bg = sign_bg.crop((int((int(weight * (1133 / height)) - 928) / 2), 0, int((int(weight * (1133 / height)) - 928) / 2 + 928), 1133))
+    elif (weight / height) < (928 / 1133):
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        sign_bg = sign_bg.resize((928, int(height * (928 / weight))))
+        print(sign_bg.size)
+        print((0, int((int(height * (928 / weight)) - 1133) / 2), 928, int((int(height * (928 / weight)) - 1133) / 2 + 1133)))
+        sign_bg = sign_bg.crop((0, int((int(height * (928 / weight)) - 1133) / 2), 928, int((int(height * (928 / weight)) - 1133) / 2 + 1133)))
+    sign_bg = sign_bg.resize((928, 1133))
+    # 模糊背景
+    sign_bg = sign_bg.filter(ImageFilter.GaussianBlur(8))
+    # 背景阴影
+    shadow = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/image/shadow.png").convert("RGBA")
     draw = ImageDraw.Draw(sign_bg)
     # 调整样式
     stamp_img = Image.open(path)
     stamp_img = stamp_img.resize((502, 502))
     w, h = stamp_img.size
-    mask = Image.new('RGBA', (w, h), color=(0,0,0,0))
+    mask = Image.new('RGBA', (w, h), color=(0, 0, 0, 0))
     mask_draw = ImageDraw.Draw(mask)
-    mask_draw.ellipse((0, 0, w, h), fill=(0,0,0,255))
+    mask_draw.ellipse((0, 0, w, h), fill=(0, 0, 0, 255))
     sign_bg.paste(stamp_img, (208, 43, 208+w, 43+h), mask)
 
     # 收集册
@@ -102,7 +128,7 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
     # 一言
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get("https://tenapi.cn/v2/yiyan")
+            response = await client.get("https://v1.hitokoto.cn/?c=f&encode=text")
             status_code = response.status_code
             if status_code == 200:
                 response_text = response.text
@@ -125,6 +151,7 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
             data[str(gid)] = {str(uid): [user_goodwill + goodwill, last_time]}
         json.dump(data, f, indent=4, ensure_ascii=False)
 
+    # 计算排行
     data = data[f"{gid}"]
     new_dictionary = {}
     rank_num = 1
@@ -155,8 +182,13 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
     para = textwrap.wrap(f"今日一言: {response_text}", width=16)
     for i, line in enumerate(para):
         draw.text((98, 53 * i + 898), line, 'white', text_font)
+
+    # 合并图片
+    final = Image.new("RGBA", (928, 1133))
+    final = Image.alpha_composite(final, sign_bg)
+    final = Image.alpha_composite(final, shadow)
     output = BytesIO()
-    sign_bg.save(output, format="png")
+    final.save(output, format="png")
 
     await give_okodokai.send(MessageSegment.image(output), at_sender=True, reply_message=True)
 
@@ -225,7 +257,19 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
             rank_num += 1
         except Exception:
             pass
-    rank_text = f"好感排行: \n{rank_text}"
+        if rank_num > 10:
+            break
+    rank_num = 1
+    for i in sorted(new_dictionary.items(), key=lambda x:x[1], reverse=True):
+        q, g = i
+        try:
+            if q != str(uid):
+                rank_num += 1
+            else:
+                break
+        except Exception:
+            pass
+    rank_text = f"好感排行: \n{rank_text}......\n当前排名: {rank_num}"
     rank_img = Text2Image.from_text(rank_text, 15, fill="black").to_image(bg_color="white")
     output = BytesIO()
     rank_img.save(output, format="png")

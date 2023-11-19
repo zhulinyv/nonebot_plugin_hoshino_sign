@@ -1,7 +1,7 @@
 import os
 import ujson as json
+from PIL import Image
 from pathlib import Path
-from PIL import Image, ImageFont
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot
 
 from .config import Config, sign_config
@@ -65,6 +65,7 @@ async def get_user_card(bot: Bot, group_id, qid):
     if not user_card:
         user_card = user_info["nickname"]
     return user_card
+
 
 login_presents = [
     '扫荡券×5', '卢币×1000', '普通EXP药水×5', '宝石×50', '玛那×3000',
