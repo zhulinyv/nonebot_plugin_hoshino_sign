@@ -90,11 +90,9 @@ _✨ NoneBot 签到 ✨_
 
 ### 效果图
 
-![image](https://github.com/zhulinyv/nonebot_plugin_hoshino_sign/assets/66541860/625eba6a-6e7e-4a77-ba9b-3f5eb9b7ed37)
-
+![image](https://github.com/zhulinyv/nonebot_plugin_hoshino_sign/assets/66541860/786b9d2d-d49d-4f3d-bc38-9026a4128519)
 
 ![image](https://github.com/zhulinyv/nonebot_plugin_hoshino_sign/assets/66541860/637020a5-36ad-49be-a82a-d53da2e07e5e)
-
 
 **(来自原作者的话) ↓↓↓**
 
