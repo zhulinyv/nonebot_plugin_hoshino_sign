@@ -2,10 +2,14 @@ import time
 import httpx
 import base64
 import random
-import nonebot
+import textwrap
+
+import ujson as json
 
 from io import BytesIO
 from typing import Union
+from PIL import Image, ImageFont, ImageDraw
+
 from nonebot import require
 require("nonebot_plugin_imageutils")
 require("nonebot_plugin_guild_patch")
@@ -13,10 +17,6 @@ from nonebot.plugin import PluginMetadata
 from nonebot_plugin_imageutils import Text2Image
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.adapters.onebot.v11.exception import ActionFailed
-
-from .base import *
-from .text import *
-from .utils import *
 
 from nonebot.log import logger
 from nonebot.params import CommandArg
@@ -29,15 +29,8 @@ from nonebot.adapters.onebot.v11 import (
     PrivateMessageEvent,
 )
 
-try:
-    import ujson as json
-except:
-    import json
-
-try:
-    NICKNAME: str = list(nonebot.get_driver().config.nickname)[0]
-except Exception:
-    NICKNAME: str = "脑积水"
+from .base import *
+from .utils import *
 
 __plugin_meta__ = PluginMetadata(
     name="签到",
@@ -49,7 +42,7 @@ __plugin_meta__ = PluginMetadata(
     ),
     extra={
         "author": "zhulinyv <zhulinyv2005@outlook.com>",
-        "version": "2.1.10",
+        "version": "2.2.0",
     },
     config=Config
 )
@@ -83,11 +76,26 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
         except KeyError:
             pass
 
+    # 发癫待办
     todo = random.choice(todo_list)
+    # 增加好感
     goodwill = random.randint(1,10)
+    # 随机图案
     stamp = random.choice(card_file_names_all)
     path = STAMP_PATH / stamp
-    image = MessageSegment.image(path)
+    # 签到背景
+    sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/image/sign_bg.png")
+    draw = ImageDraw.Draw(sign_bg)
+    # 调整样式
+    stamp_img = Image.open(path)
+    stamp_img = stamp_img.resize((502, 502))
+    w, h = stamp_img.size
+    mask = Image.new('RGBA', (w, h), color=(0,0,0,0))
+    mask_draw = ImageDraw.Draw(mask)
+    mask_draw.ellipse((0, 0, w, h), fill=(0,0,0,255))
+    sign_bg.paste(stamp_img, (208, 43, 208+w, 43+h), mask)
+
+    # 收集册
     card_id = stamp[:-4]
     db.add_card_num(gid, uid, card_id)
 
@@ -117,8 +125,21 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
             data[str(gid)] = {str(uid): [user_goodwill + goodwill, last_time]}
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-    await give_okodokai.send(f'\n欢迎回来, 主人 ~ !' + image + f'\n好感 + {goodwill} ! 当前好感: {data[str(gid)][str(uid)][0]}\n' + f'主人今天要{todo}吗? \n\n今日一言: {response_text}', at_sender=True)
+    # 绘制文字
+    with open(os.path.dirname(os.path.abspath(__file__)) + "/STHUPO.ttf", "rb") as draw_font:
+        bytes_font = BytesIO(draw_font.read())
+        text_font = ImageFont.truetype(font=bytes_font, size=50)
+    draw.text(xy=(90, 600), text=f"好感 + {goodwill} !  当前好感: {data[str(gid)][str(uid)][0]}", font=text_font)
+    para = textwrap.wrap(f"主人今天要{todo}吗?", width=15)
+    for i, line in enumerate(para):
+        draw.text((90, 60 * i + 660), line, 'white', text_font)
+    para = textwrap.wrap(f"今日一言: {response_text}", width=15)
+    for i, line in enumerate(para):
+        draw.text((90, 60 * i + 780), line, 'white', text_font)
+    output = BytesIO()
+    sign_bg.save(output, format="png")
 
+    await give_okodokai.send(MessageSegment.image(output), at_sender=True, reply_message=True)
 
 
 storage = on_command('收集册', aliases={"排行榜"}, priority=30, block=True)
@@ -135,7 +156,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
         elif len(variable_list) == 1:
             uid = int(variable_list[0])
         else:
-            await storage.finish("格式错误，请检查后重试\n收集册+艾特(或qq号)", at_sender=True)
+            await storage.finish("格式错误, 请检查后重试, 格式应为:\n收集册+艾特(或qq号)", at_sender=True)
 
     # 获取群号
     if isinstance(event, GroupMessageEvent):
@@ -169,7 +190,6 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     base64_str = f'base64://{base64.b64encode(buf.getvalue()).decode()}'
     img = MessageSegment.image(base64_str)
 
-    '''
     with open(GOODWILL_PATH + "goodwill.json", "r", encoding="utf-8") as f:
         data = json.load(f)
     data = data[f"{gid}"]
@@ -178,33 +198,38 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     rank_num = 1
     for user_data in data:
         new_dictionary[f"{user_data}"] = int(f"{data[f'{user_data}'][0]}")
+    logger.debug(f""">>>>>
+{new_dictionary}
+<<<<<""")
     for i in sorted(new_dictionary) :
-        rank_user = await get_user_card(bot, gid, str(i))
-        rank_text += f"{rank_num}. {rank_user} 好感:{new_dictionary[i]}\n"
-        rank_num += 1
-    rank_text = f"好感排行: \n\n{rank_text}"
-    rank_img = Text2Image.from_text(rank_text, 15, fill="white").to_image()
+        logger.debug(f">>>>>{i}")
+        logger.debug(f">>>>>{gid}")
+        try:
+            rank_user = await get_user_card(bot, gid, str(i))
+            rank_text += f"{rank_num}. {rank_user} 好感:{new_dictionary[i]}\n"
+            rank_num += 1
+        except Exception:
+            pass
+    rank_text = f"好感排行: \n{rank_text}"
+    rank_img = Text2Image.from_text(rank_text, 15, fill="black").to_image(bg_color="white")
     output = BytesIO()
     rank_img.save(output, format="png")
-    '''
 
     # 整合信息并发送
     if isinstance(event, GroupMessageEvent):
         lucky_user_card = await get_user_card(bot, gid, uid)
         try:
-            # await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
-            await storage.finish(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}', reply_message=True)
+            await storage.finish(f'\n『{lucky_user_card}』的收集册:\n' + img + f'\n图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
         except ActionFailed:
             logger.warning("直接发送失败, 尝试以转发形式发送!")
             msgs = []
             message_list = []
-            # message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output))
-            message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}')
+            message_list.append(f'『{lucky_user_card}』的收集册:\n' + img + f'\n图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output))
             for msg in message_list:
                 msgs.append({
                     'type': 'node',
                     'data': {
-                        'name': f"{NICKNAME}",
+                        'name': f"{Config.NICKNAME}",
                         'uin': bot.self_id,
                         'content': msg
                     }
@@ -212,10 +237,8 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
             await bot.call_api('send_group_forward_msg', group_id=gid, messages=msgs)
             logger.success("发送成功!")
     elif isinstance(event, GuildMessageEvent):
-        # await storage.finish(f'的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), at_sender=True)
-        await storage.finish(f'的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}', at_sender=True)
+        await storage.finish(f'的收集册:\n' + img + f'\n图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), at_sender=True)
     elif isinstance(event, PrivateMessageEvent):
-        # await storage.finish(f'你的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
-        await storage.finish(f'你的收集册:\n' + img + f'图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}', reply_message=True)
+        await storage.finish(f'你的收集册:\n' + img + f'\n图鉴完成度: {normalize_digit_format(len(cards_num))}/{normalize_digit_format(len(card_file_names_all))}\n当前群排名: {ranking_desc}\n' + MessageSegment.image(output), reply_message=True)
     else:
-        await storage.finish()
+        return
