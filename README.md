@@ -90,11 +90,13 @@ _✨ NoneBot 签到 ✨_
 
 ### 效果图
 
-[![p9cSLCR.png](https://s1.ax1x.com/2023/05/13/p9cSLCR.png)](https://imgse.com/i/p9cSLCR)
+![image](https://github.com/zhulinyv/nonebot_plugin_hoshino_sign/assets/66541860/625eba6a-6e7e-4a77-ba9b-3f5eb9b7ed37)
+
+
+![image](https://github.com/zhulinyv/nonebot_plugin_hoshino_sign/assets/66541860/637020a5-36ad-49be-a82a-d53da2e07e5e)
+
 
 **(来自原作者的话) ↓↓↓**
-
-![收集册](https://user-images.githubusercontent.com/98363578/185780489-d60b1484-c4af-4834-b1f4-6db569a91048.PNG)
 
 红的是已经收集到的，灰的是没收集的
 
