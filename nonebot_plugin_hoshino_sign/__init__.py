@@ -42,7 +42,7 @@ __plugin_meta__ = PluginMetadata(
     ),
     extra={
         "author": "zhulinyv <zhulinyv2005@outlook.com>",
-        "version": "2.2.2",
+        "version": "2.2.3",
     },
     config=Config
 )
