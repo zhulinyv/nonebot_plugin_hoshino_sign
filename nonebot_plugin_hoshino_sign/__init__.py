@@ -201,12 +201,12 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     logger.debug(f""">>>>>
 {new_dictionary}
 <<<<<""")
-    for i in sorted(new_dictionary) :
+    for i in sorted(new_dictionary.items(), key=lambda x:x[1], reverse=True):
         logger.debug(f">>>>>{i}")
-        logger.debug(f">>>>>{gid}")
+        q, g = i
         try:
-            rank_user = await get_user_card(bot, gid, str(i))
-            rank_text += f"{rank_num}. {rank_user} 好感:{new_dictionary[i]}\n"
+            rank_user = await get_user_card(bot, gid, q)
+            rank_text += f"{rank_num}. {rank_user} 好感:{g}\n"
             rank_num += 1
         except Exception:
             pass
