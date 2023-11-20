@@ -114,8 +114,8 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
         # 背景阴影
         shadow = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/image/shadow.png").convert("RGBA")
     else:
-        num = random.randint(1, 25)
-        sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + f"/image/sign_bg/sign_bg{num}.png")
+        sign_bg_list = os.listdir(os.path.dirname(os.path.abspath(__file__)) + "/image/sign_bg")
+        sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + f"/image/sign_bg/{random.choice(sign_bg_list)}")
 
     draw = ImageDraw.Draw(sign_bg)
     # 调整样式
