@@ -31,6 +31,7 @@ from nonebot.adapters.onebot.v11 import (
 
 from .base import *
 from .utils import *
+from .config import *
 
 __plugin_meta__ = PluginMetadata(
     name="签到",
@@ -42,7 +43,7 @@ __plugin_meta__ = PluginMetadata(
     ),
     extra={
         "author": "zhulinyv <zhulinyv2005@outlook.com>",
-        "version": "2.3.0",
+        "version": "2.3.2",
     },
     config=Config
 )
@@ -83,34 +84,39 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
     # 随机图案
     stamp = random.choice(card_file_names_all)
     path = STAMP_PATH / stamp
-    # 下载背景
-    res = httpx.get(url='https://dev.iw233.cn/api.php?sort=mp&type=json', headers={'Referer':'http://www.weibo.com/'})
-    res = res.text
-    pic_url = json.loads(res)["pic"][0]
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{pic_url}", headers={'Referer':'http://www.weibo.com/',}, timeout=10)
-        with open(os.path.dirname(os.path.abspath(__file__)) + "/sign_bg.png", 'wb') as f:
-            f.write(response.content)
-    # 调整大小
-    sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/sign_bg.png").convert("RGBA")
-    weight, height = sign_bg.size
-    if (weight / height) >= (928 / 1133):
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        sign_bg = sign_bg.resize((int(weight * (1133 / height)), 1133))
-        print(sign_bg.size)
-        print((int((int(weight * (1133 / height)) - 928) / 2), 0, int((int(weight * (1133 / height)) - 928) / 2 + 928), 1133))
-        sign_bg = sign_bg.crop((int((int(weight * (1133 / height)) - 928) / 2), 0, int((int(weight * (1133 / height)) - 928) / 2 + 928), 1133))
-    elif (weight / height) < (928 / 1133):
-        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-        sign_bg = sign_bg.resize((928, int(height * (928 / weight))))
-        print(sign_bg.size)
-        print((0, int((int(height * (928 / weight)) - 1133) / 2), 928, int((int(height * (928 / weight)) - 1133) / 2 + 1133)))
-        sign_bg = sign_bg.crop((0, int((int(height * (928 / weight)) - 1133) / 2), 928, int((int(height * (928 / weight)) - 1133) / 2 + 1133)))
-    sign_bg = sign_bg.resize((928, 1133))
-    # 模糊背景
-    sign_bg = sign_bg.filter(ImageFilter.GaussianBlur(8))
-    # 背景阴影
-    shadow = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/image/shadow.png").convert("RGBA")
+    if sign_config.bg_mode == 1:
+        # 下载背景
+        res = httpx.get(url='https://dev.iw233.cn/api.php?sort=mp&type=json', headers={'Referer':'http://www.weibo.com/'})
+        res = res.text
+        pic_url = json.loads(res)["pic"][0]
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{pic_url}", headers={'Referer':'http://www.weibo.com/',}, timeout=10)
+            with open(os.path.dirname(os.path.abspath(__file__)) + "/sign_bg.png", 'wb') as f:
+                f.write(response.content)
+        # 调整大小
+        sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/sign_bg.png").convert("RGBA")
+        weight, height = sign_bg.size
+        if (weight / height) >= (928 / 1133):
+            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+            sign_bg = sign_bg.resize((int(weight * (1133 / height)), 1133))
+            print(sign_bg.size)
+            print((int((int(weight * (1133 / height)) - 928) / 2), 0, int((int(weight * (1133 / height)) - 928) / 2 + 928), 1133))
+            sign_bg = sign_bg.crop((int((int(weight * (1133 / height)) - 928) / 2), 0, int((int(weight * (1133 / height)) - 928) / 2 + 928), 1133))
+        elif (weight / height) < (928 / 1133):
+            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+            sign_bg = sign_bg.resize((928, int(height * (928 / weight))))
+            print(sign_bg.size)
+            print((0, int((int(height * (928 / weight)) - 1133) / 2), 928, int((int(height * (928 / weight)) - 1133) / 2 + 1133)))
+            sign_bg = sign_bg.crop((0, int((int(height * (928 / weight)) - 1133) / 2), 928, int((int(height * (928 / weight)) - 1133) / 2 + 1133)))
+        sign_bg = sign_bg.resize((928, 1133))
+        # 模糊背景
+        sign_bg = sign_bg.filter(ImageFilter.GaussianBlur(8))
+        # 背景阴影
+        shadow = Image.open(os.path.dirname(os.path.abspath(__file__)) + "/image/shadow.png").convert("RGBA")
+    else:
+        num = random.randint(1, 25)
+        sign_bg = Image.open(os.path.dirname(os.path.abspath(__file__)) + f"/image/sign_bg/sign_bg{num}.png")
+
     draw = ImageDraw.Draw(sign_bg)
     # 调整样式
     stamp_img = Image.open(path)
@@ -169,7 +175,7 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
             pass
 
     # 绘制文字
-    with open(os.path.dirname(os.path.abspath(__file__)) + "/STHUPO.ttf", "rb") as draw_font:
+    with open(sign_config.font_path, "rb") as draw_font:
         bytes_font = BytesIO(draw_font.read())
         text_font = ImageFont.truetype(font=bytes_font, size=45)
     draw.text(xy=(98, 580), text=f"欢迎回来, {rank_user}~!", font=text_font)
@@ -183,12 +189,15 @@ async def _(event: Union[GroupMessageEvent, GuildMessageEvent, PrivateMessageEve
     for i, line in enumerate(para):
         draw.text((98, 53 * i + 898), line, 'white', text_font)
 
-    # 合并图片
-    final = Image.new("RGBA", (928, 1133))
-    final = Image.alpha_composite(final, sign_bg)
-    final = Image.alpha_composite(final, shadow)
     output = BytesIO()
-    final.save(output, format="png")
+    if sign_config.bg_mode == 1:
+        # 合并图片
+        final = Image.new("RGBA", (928, 1133))
+        final = Image.alpha_composite(final, sign_bg)
+        final = Image.alpha_composite(final, shadow)
+        final.save(output, format="png")
+    else:
+        sign_bg.save(output, format="png")
 
     await give_okodokai.send(MessageSegment.image(output), at_sender=True, reply_message=True)
 
