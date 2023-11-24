@@ -8,13 +8,12 @@ import ujson as json
 
 from io import BytesIO
 from typing import Union
+from pil_utils import Text2Image
 from PIL import Image, ImageFont, ImageDraw, ImageFilter
 
 from nonebot import require
-require("nonebot_plugin_imageutils")
 require("nonebot_plugin_guild_patch")
 from nonebot.plugin import PluginMetadata
-from nonebot_plugin_imageutils import Text2Image
 from nonebot_plugin_guild_patch import GuildMessageEvent
 from nonebot.adapters.onebot.v11.exception import ActionFailed
 
@@ -231,7 +230,7 @@ async def _(bot: Bot, event: Union[GroupMessageEvent, GuildMessageEvent, Private
     # 收集册
     row_num = len_card//COL_NUM if len_card % COL_NUM !=0 else len_card//COL_NUM-1
     base = Image.open(FRAME_DIR_PATH + '/frame.png')
-    base = base.resize((40 + COL_NUM * 80 + (COL_NUM - 1) * 10, 150 + row_num * 80 + (row_num - 1) * 10), Image.ANTIALIAS)
+    base = base.resize((40 + COL_NUM * 80 + (COL_NUM - 1) * 10, 150 + row_num * 80 + (row_num - 1) * 10), Image.LANCZOS)
     cards_num = db.get_cards_num(gid, uid)
     row_index_offset = 0
     row_offset = 0
